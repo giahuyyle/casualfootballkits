@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { searchProducts } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import ProductFilters from "@/components/ProductFilters";
 
 export default function SearchResults() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,26 +13,86 @@ export default function SearchResults() {
   const [products, setProducts] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
+  const [availableSizes, setAvailableSizes] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  // Filter / sort state
+  const [selectedSizes, setSelectedSizes] = useState([]);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sort, setSort] = useState("");
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    size: "",
+    minPrice: "",
+    maxPrice: "",
+    sort: "",
+  });
+
+  const fetchData = (page, filters) => {
     if (!query.trim()) return;
     setLoading(true);
-    searchProducts({ q: query, page: currentPage })
+    searchProducts({ q: query, page, ...filters })
       .then((data) => {
         setProducts(data.products);
         setTotalPages(data.totalPages);
         setTotalProducts(data.totalProducts);
+        setAvailableSizes(data.availableSizes || []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [query, currentPage]);
+  };
+
+  useEffect(() => {
+    fetchData(currentPage, appliedFilters);
+  }, [query, currentPage, appliedFilters]);
+
+  // Reset filters when query changes
+  useEffect(() => {
+    setSelectedSizes([]);
+    setMinPrice("");
+    setMaxPrice("");
+    setSort("");
+    setAppliedFilters({ size: "", minPrice: "", maxPrice: "", sort: "" });
+  }, [query]);
 
   const goToPage = (page) => {
     const params = { q: query };
     if (page > 1) params.page = String(page);
     setSearchParams(params);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleApplyFilters = () => {
+    const filters = {
+      size: selectedSizes.join(","),
+      minPrice,
+      maxPrice,
+      sort,
+    };
+    setAppliedFilters(filters);
+    setSearchParams({ q: query }); // reset to page 1
+  };
+
+  const handleClearFilters = () => {
+    setSelectedSizes([]);
+    setMinPrice("");
+    setMaxPrice("");
+    setSort("");
+    setAppliedFilters({ size: "", minPrice: "", maxPrice: "", sort: "" });
+    setSearchParams({ q: query });
+  };
+
+  const handleSortChange = (value) => {
+    setSort(value);
+    const filters = {
+      size: selectedSizes.join(","),
+      minPrice,
+      maxPrice,
+      sort: value,
+    };
+    setAppliedFilters(filters);
+    setSearchParams({ q: query }); // reset to page 1
   };
 
   if (!query.trim()) {
@@ -51,6 +112,20 @@ export default function SearchResults() {
       <p className="text-center text-sm text-muted-foreground mb-8">
         {totalProducts} result{totalProducts !== 1 && "s"}
       </p>
+
+      <ProductFilters
+        availableSizes={availableSizes}
+        selectedSizes={selectedSizes}
+        onSizesChange={setSelectedSizes}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
+        onMinPriceChange={setMinPrice}
+        onMaxPriceChange={setMaxPrice}
+        sort={sort}
+        onSortChange={handleSortChange}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+      />
 
       {loading ? (
         <p className="text-center text-muted-foreground">Loading...</p>

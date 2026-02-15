@@ -17,38 +17,84 @@ function writeProducts(products) {
 
 const router = Router();
 
-// GET /api/products — list with optional category filter & pagination
-router.get("/", (req, res) => {
-  const { category, page = 1, limit = 12 } = req.query;
-  let products = readProducts();
+// Shared helper: apply filters & sorting
+function applyFiltersAndSort(products, query) {
+  const { size, minPrice, maxPrice, sort } = query;
 
-  if (category) {
-    products = products.filter((p) => p.category === category);
+  // Filter by size (comma-separated, e.g. "S,M,L")
+  if (size) {
+    const sizes = size.split(",").map((s) => s.trim());
+    products = products.filter((p) => sizes.includes(p.size));
   }
 
-  const pageNum = Math.max(1, Number(page));
-  const limitNum = Math.max(1, Math.min(100, Number(limit)));
+  // Filter by price range
+  if (minPrice != null && minPrice !== "") {
+    products = products.filter((p) => p.price >= Number(minPrice));
+  }
+  if (maxPrice != null && maxPrice !== "") {
+    products = products.filter((p) => p.price <= Number(maxPrice));
+  }
+
+  // Sort
+  if (sort === "price-asc") {
+    products.sort((a, b) => a.price - b.price);
+  } else if (sort === "price-desc") {
+    products.sort((a, b) => b.price - a.price);
+  } else if (sort === "newest") {
+    products.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+  }
+
+  return products;
+}
+
+// Shared helper: paginate
+function paginate(products, query) {
+  const pageNum = Math.max(1, Number(query.page) || 1);
+  const limitNum = Math.max(1, Math.min(100, Number(query.limit) || 12));
   const totalProducts = products.length;
   const totalPages = Math.ceil(totalProducts / limitNum);
   const safePage = Math.min(pageNum, totalPages || 1);
   const startIndex = (safePage - 1) * limitNum;
-  const paginatedProducts = products.slice(startIndex, startIndex + limitNum);
 
-  res.json({
-    products: paginatedProducts,
+  return {
+    products: products.slice(startIndex, startIndex + limitNum),
     page: safePage,
     totalPages,
     totalProducts,
+  };
+}
+
+// Collect unique sizes from a product set (for filter UI)
+function getAvailableSizes(products) {
+  return [...new Set(products.map((p) => p.size))].sort();
+}
+
+// GET /api/products — list with optional category filter, size, price range, sort & pagination
+router.get("/", (req, res) => {
+  let products = readProducts();
+
+  if (req.query.category) {
+    products = products.filter((p) => p.category === req.query.category);
+  }
+
+  const availableSizes = getAvailableSizes(products);
+  products = applyFiltersAndSort(products, req.query);
+
+  res.json({
+    ...paginate(products, req.query),
+    availableSizes,
   });
 });
 
-// GET /api/products/search?q= — search by name or code
+// GET /api/products/search?q= — search by name or code with filters
 router.get("/search", (req, res) => {
-  const { q = "", page = 1, limit = 12 } = req.query;
+  const { q = "" } = req.query;
   const query = q.toLowerCase().trim();
 
   if (!query) {
-    return res.json({ products: [], page: 1, totalPages: 0, totalProducts: 0 });
+    return res.json({ products: [], page: 1, totalPages: 0, totalProducts: 0, availableSizes: [] });
   }
 
   let products = readProducts();
@@ -58,19 +104,12 @@ router.get("/search", (req, res) => {
       p.code.toLowerCase().includes(query)
   );
 
-  const pageNum = Math.max(1, Number(page));
-  const limitNum = Math.max(1, Math.min(100, Number(limit)));
-  const totalProducts = products.length;
-  const totalPages = Math.ceil(totalProducts / limitNum);
-  const safePage = Math.min(pageNum, totalPages || 1);
-  const startIndex = (safePage - 1) * limitNum;
-  const paginatedProducts = products.slice(startIndex, startIndex + limitNum);
+  const availableSizes = getAvailableSizes(products);
+  products = applyFiltersAndSort(products, req.query);
 
   res.json({
-    products: paginatedProducts,
-    page: safePage,
-    totalPages,
-    totalProducts,
+    ...paginate(products, req.query),
+    availableSizes,
   });
 });
 
@@ -103,6 +142,7 @@ router.post("/", (req, res) => {
     imageUrls: imageUrls || [],
     size,
     price: Number(price),
+    createdAt: new Date().toISOString(),
   };
 
   products.push(newProduct);
