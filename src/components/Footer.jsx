@@ -2,7 +2,7 @@ import { Mail, Instagram } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="mt-auto" style={{ backgroundColor: "#8B4447" }}>
+    <footer className="mt-auto" style={{ backgroundColor: "#7B0323" }}>
       <div className="flex flex-col items-center justify-center px-6 py-16 text-white text-center">
         <h2 className="text-3xl md:text-4xl font-bold tracking-wide mb-6">
           WANT TO SELL YOUR SHIRTS?
