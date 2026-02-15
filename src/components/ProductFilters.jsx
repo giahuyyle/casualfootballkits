@@ -30,6 +30,11 @@ export default function ProductFilters({
   const hasActiveFilters =
     selectedSizes.length > 0 || minPrice || maxPrice || sort;
 
+  const priceRangeError =
+    minPrice !== "" &&
+    maxPrice !== "" &&
+    Number(maxPrice) < Number(minPrice);
+
   const toggleSize = (size) => {
     if (selectedSizes.includes(size)) {
       onSizesChange(selectedSizes.filter((s) => s !== size));
@@ -114,14 +119,19 @@ export default function ProductFilters({
                 placeholder="Max"
                 value={maxPrice}
                 onChange={(e) => onMaxPriceChange(e.target.value)}
-                className="w-28"
+                className={`w-28 ${priceRangeError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
               />
             </div>
+            {priceRangeError && (
+              <p className="text-xs text-red-500 mt-1">
+                Max price must be greater than min price
+              </p>
+            )}
           </div>
 
           {/* Action buttons */}
           <div className="flex gap-2 pt-1">
-            <Button size="sm" onClick={onApplyFilters}>
+            <Button size="sm" onClick={onApplyFilters} disabled={priceRangeError}>
               Apply Filters
             </Button>
             {hasActiveFilters && (
