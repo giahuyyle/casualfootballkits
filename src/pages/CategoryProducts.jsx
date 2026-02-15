@@ -56,7 +56,7 @@ export default function CategoryProducts() {
                 to={`/products/${product.id}`}
                 className="group rounded-lg border bg-card overflow-hidden hover:shadow-md transition-shadow"
               >
-                <div className="aspect-[3/4] overflow-hidden bg-muted">
+                <div className="aspect-3/4 overflow-hidden bg-muted">
                   <img
                     src={product.imageUrls[0]}
                     alt={product.name}
