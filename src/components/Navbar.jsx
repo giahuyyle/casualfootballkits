@@ -11,9 +11,9 @@ import {
 
 export default function Navbar() {
   return (
-    <nav className="border-b bg-white">
+    <nav className="relative z-50 border-b bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-center px-6 py-3">
-        <NavigationMenu>
+        <NavigationMenu viewport={false}>
           <NavigationMenuList>
             {/* Home */}
             <NavigationMenuItem>
@@ -26,7 +26,7 @@ export default function Navbar() {
             <NavigationMenuItem>
               <NavigationMenuTrigger>Categories</NavigationMenuTrigger>
               <NavigationMenuContent>
-                <ul className="grid w-48 gap-1 p-2">
+                <ul className="grid w-auto gap-1">
                   <li>
                     <NavigationMenuLink asChild>
                       <Link
