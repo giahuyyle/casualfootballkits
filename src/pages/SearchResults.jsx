@@ -1,28 +1,23 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useSearchParams } from "react-router";
-import { fetchProducts } from "@/lib/api";
+import { Link, useSearchParams } from "react-router";
+import { searchProducts } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const categoryLabels = {
-  "football-kits": "Football Kits",
-  "football-gifts": "Football Gifts",
-};
-
-export default function CategoryProducts() {
-  const { category } = useParams();
+export default function SearchResults() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const label = categoryLabels[category];
-
+  const query = searchParams.get("q") || "";
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
+
   const [products, setProducts] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!query.trim()) return;
     setLoading(true);
-    fetchProducts({ category, page: currentPage })
+    searchProducts({ q: query, page: currentPage })
       .then((data) => {
         setProducts(data.products);
         setTotalPages(data.totalPages);
@@ -30,29 +25,31 @@ export default function CategoryProducts() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [category, currentPage]);
+  }, [query, currentPage]);
 
   const goToPage = (page) => {
-    setSearchParams(page === 1 ? {} : { page: String(page) });
+    const params = { q: query };
+    if (page > 1) params.page = String(page);
+    setSearchParams(params);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (!label) {
+  if (!query.trim()) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <h1 className="text-4xl font-bold mb-4">Category Not Found</h1>
-        <Link to="/" className="text-blue-600 hover:underline">
-          Go back home
-        </Link>
+      <div className="py-20 text-center">
+        <h1 className="text-2xl font-bold mb-2">Search</h1>
+        <p className="text-muted-foreground">Enter a search term to find products.</p>
       </div>
     );
   }
 
   return (
     <div className="py-10">
-      <h1 className="text-3xl font-bold mb-2 text-center">{label}</h1>
+      <h1 className="text-3xl font-bold mb-2 text-center">
+        Search results for &ldquo;{query}&rdquo;
+      </h1>
       <p className="text-center text-sm text-muted-foreground mb-8">
-        {totalProducts} product{totalProducts !== 1 && "s"}
+        {totalProducts} result{totalProducts !== 1 && "s"}
       </p>
 
       {loading ? (
@@ -90,7 +87,6 @@ export default function CategoryProducts() {
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-10">
               <Button
